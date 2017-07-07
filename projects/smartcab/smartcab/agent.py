@@ -39,7 +39,13 @@ class LearningAgent(Agent):
         # Update epsilon using a decay function of your choice
         # Update additional class parameters as needed
         # If 'testing' is True, set epsilon and alpha to 0
-
+        
+        if not testing:
+            self.epsilon = self.epsilon - 0.001
+        else:
+            self.epsilon = 0
+            self.alpha = 0
+            
         return None
 
     def build_state(self):
@@ -56,8 +62,9 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set 'state' as a tuple of relevant data for the agent        
-        state = None
-
+        #state = None
+        state=(waypoint,inputs['light'],inputs['oncoming'],inputs['left'],inputs['right'])
+        
         return state
 
 
@@ -69,10 +76,19 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Calculate the maximum Q-value of all actions for a given state
+        maxQ=-10000
+        retAct = None
+        
+        for actn in self.Q[state].keys():
+            val = self.Q[state][actn]
+            if val > maxQ:
+                maxQ = val
+                retAct = actn
+            
 
-        maxQ = None
+        #maxQ = None
 
-        return maxQ 
+        return maxQ, retAct 
 
 
     def createQ(self, state):
@@ -84,6 +100,11 @@ class LearningAgent(Agent):
         # When learning, check if the 'state' is not in the Q-table
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
+        
+        if state not in self.Q:
+            self.Q[state] = {}
+            for actn in self.valid_actions:
+                self.Q[state][actn] = 0
 
         return
 
@@ -95,8 +116,16 @@ class LearningAgent(Agent):
         # Set the agent state and default action
         self.state = state
         self.next_waypoint = self.planner.next_waypoint()
-        action = None
-
+        if not self.learning:
+            action = self.valid_actions[random.randint(0,len(self.valid_actions)-1)]
+            #print action   
+        else:
+            if random.random()<=self.epsilon:
+                action = self.valid_actions[random.randint(0,len(self.valid_actions)-1)]
+            else:                
+                maxQ, retAct = self.get_maxQ(state)       
+                action=retAct
+        #   print action
         ########### 
         ## TO DO ##
         ###########
@@ -117,7 +146,8 @@ class LearningAgent(Agent):
         ###########
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-
+        
+        self.Q[state][action] = (1-self.alpha)*self.Q[state][action] + self.alpha*reward
         return
 
 
@@ -153,13 +183,16 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
+    #agent = env.create_agent(LearningAgent)
     agent = env.create_agent(LearningAgent)
-    
+    agent.learning=True
+    agent.alpha = 0.5
     ##############
     # Follow the driving agent
     # Flags:
     #   enforce_deadline - set to True to enforce a deadline metric
     env.set_primary_agent(agent)
+    env.enforce_deadline = True
 
     ##############
     # Create the simulation
@@ -168,14 +201,17 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env)
+    #sim = Simulator(env)
+    #sim = Simulator(env,update_delay=0.01,log_metrics=True,display=True)
+    sim = Simulator(env,update_delay=0.01,log_metrics=True,display=True,optimized=True)
     
     ##############
     # Run the simulator
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run()
+    #sim.run()
+    sim.run(n_test=10)
 
 
 if __name__ == '__main__':
