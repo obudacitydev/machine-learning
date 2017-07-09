@@ -84,7 +84,12 @@ class LearningAgent(Agent):
             if val > maxQ:
                 maxQ = val
                 retAct = actn
-            
+            elif val == maxQ:
+                randVal = random.randint(0,1)
+                if randVal==1:
+                    maxQ = val
+                    retAct = actn
+                    
 
         #maxQ = None
 
